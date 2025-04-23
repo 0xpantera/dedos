@@ -15,8 +15,8 @@ mod StarknetBank {
 
     #[storage]
     struct Storage {
-        balances: Map<ContractAddress, u256>, // Balance of each user in the Bank, address -> balance
-        currency: IERC20Dispatcher, // The currency contract
+        balances: Map<ContractAddress, u256>,
+        currency: IERC20Dispatcher,
         total_balance: u256
     }
 
