@@ -1,30 +1,24 @@
-use starknet::ContractAddress;
 
 #[starknet::interface]
-pub trait IMetaverseAucion<TContractState> {
+pub trait IAuction<TContractState> {
     fn bid(ref self: TContractState, item_id: u256, amount: u256);
     fn list_item(ref self: TContractState, item_id: u256);
     fn accept_highest_bid(ref self: TContractState, item_id: u256);
 }
 
 #[starknet::contract]
-mod MetaverseAucion {
+mod Auction {
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::{get_caller_address, get_contract_address, ContractAddress, get_block_timestamp};
-    use starknet::storage::Map;
     use starknet::storage::{
         StorageMapReadAccess, StorageMapWriteAccess,
-        StoragePointerReadAccess, StoragePointerWriteAccess
+        StoragePointerReadAccess, StoragePointerWriteAccess, Map
     };
     #[feature("deprecated-list-trait")]
     use alexandria_storage::list::{ListTrait, List};
     use core::num::traits::Zero;
 
-    // Definition of the Bid struct
-    // PartialEq is used to compare the struct
-    // Serde is used to serialize and deserialize the struct
-    // starknet::Store is used to store the struct in the contract storage
     #[derive(PartialEq, Drop, Serde, Copy, starknet::Store, Hash)]
     struct Bid {
         block_timestamp: u64,
@@ -35,10 +29,10 @@ mod MetaverseAucion {
 
     #[storage]
     struct Storage {
-        nft: IERC721Dispatcher, // The NFT contract
-        eth: IERC20Dispatcher, // The ETH contract
-        listed_items: Map<u256, ContractAddress>, // The items in the auction, item_id -> owner
-        item_bids: Map<u256, List<Bid>>, // Maps between item id to it's bids
+        nft: IERC721Dispatcher,
+        eth: IERC20Dispatcher,
+        listed_items: Map<u256, ContractAddress>,
+        item_bids: Map<u256, List<Bid>>,
     }
 
     #[constructor]
@@ -48,7 +42,7 @@ mod MetaverseAucion {
     }
 
     #[abi(embed_v0)]
-    impl MetaverseAucionImpl of super::IMetaverseAucion<ContractState> {
+    impl AuctionImpl of super::IAuction<ContractState> {
 
         // Bid on an existing item
         // @param item_id: The id of the item
@@ -76,7 +70,7 @@ mod MetaverseAucion {
             // Update the state
             assert(item_bids.append(new_bid).is_ok(), 'Bid append failed');
 
-            // Transfer the bidded amount to the contract
+            // Transfer the bid amount to the contract
             self.eth.read().transfer_from(caller, get_contract_address(), amount);
         }
 

